@@ -1,0 +1,549 @@
+\documentclass[uplatex]{jsarticle}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{framed}
+\usepackage{url}
+
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\range}{\operatorname{range}}
+\newcommand{\dom}{\operatorname{dom}}
+
+\theoremstyle{definition} %斜体にしない
+\newtheorem{thm}{定理}
+\newtheorem{defi}[thm]{定義}
+\newtheorem{lem}[thm]{補題}
+\newtheorem{prop}[thm]{命題}
+\newtheorem{exm}[thm]{例}
+\renewcommand{\proofname}{証明}
+
+
+\renewcommand{\labelenumi}{(\arabic{enumi})}
+
+\begin{document}
+
+\title{計算理論の初歩}
+\author{fujidig}
+\date{2017年9月}
+\maketitle
+
+計算理論は自然数の集合に対し計算可能という概念を定め，それについて考察する分野である．
+この資料ではプログラミング言語に触ったことのある人向けに計算理論の初歩を解説する．この資料の目標はゲーデルの不完全性定理を証明することである．
+
+\section{計算理論の基礎}
+
+計算可能性の定義の仕方は何通りもあるが，この資料では「C言語のプログラムによって書ける関数」として定める．
+ただし，C言語のフルの機能を想定すると難点があるので以下の機能は制限する:
+\begin{enumerate}
+\item 整数型以外のデータ型
+\item 入出力
+\item グローバル変数
+\item 標準ライブラリ
+\item その他外部ライブラリ (並列処理や機種依存コマンドなど)
+\end{enumerate}
+また，	ハードウェアのエラーは起きないものとし，メモリは十分にあるものとする．つまり，いつどんな環境で実行しても常に実行結果は一定になるような理想的状況だけを考える． 
+また，現実のC言語はint型は有限通りの値しかとることができないが，数学的な取扱いを簡単にするため，我々のC言語ではint型に絶対値がどんなに大きい整数も扱えることとする．
+
+\begin{defi}
+C言語のプログラム$P$に対し，それが計算する関数$\Phi_P$とは，
+\[
+\Phi_P(x) = 
+\begin{cases}
+y & (Pにxを入力したときyが返る) \\
+\mathrm{undefined} & (Pにxを入力したとき停止しない)
+\end{cases}
+\]
+で定義される関数とする．
+\end{defi}
+
+\begin{defi}
+$f: \N \to \N$が{\bfseries partial computable (p.c.)}とはC言語のプログラムによって計算できる関数であるときをいう．つまり$f = \Phi_P$となるプログラム$P$が存在するときである．
+
+$x$が$f$の定義域に入っているとき(停止するとき)，$f(x)\downarrow$と書く．
+
+$f: \N \to \N$が{\bfseries computable (計算可能)}とは全域かつp.c.であるものをいう．全域とは定義域が$\N$であることを言う．別の言葉でいうと$f$が計算可能であるのは必ず停止するプログラムで書けることである．
+
+$A \subset \N$が{\bfseries computable (計算可能)}とは$A$の特徴関数$\chi_A$が計算可能であることを言う．
+\end{defi}
+
+自然数から自然数への関数全体は連続体濃度を持つ(実数と同じ個数の要素が存在する)のに対し，計算可能な関数は可算無限個しかない．よって計算可能な関数は自然数上の関数のうちごくわずかでしかない．
+
+\begin{exm}
+素数全体は計算可能である．なぜなら，次のプログラムによって素数全体の特徴関数を計算できるから．
+
+
+\begin{align*}
+&\operatorname{int} \operatorname{isprime}(\operatorname{int} n) \{ \\
+&\hspace{4em}\operatorname{for} (\operatorname{int} i = 2; i < n; i ++) \{ \\
+&\hspace{4em}\hspace{4em}\operatorname{if} (n \% i == 0) \{ \\
+&\hspace{4em}\hspace{4em}\hspace{4em}\operatorname{return} 0; \\
+&\hspace{4em}\hspace{4em}\} \\
+&\hspace{4em}\} \\ 
+&\hspace{4em}\operatorname{return} 1; \\
+&\}
+\end{align*}
+\end{exm}
+
+\begin{defi}
+プログラム全体を適当な方法で一列に並べ，$e (\in \N)$番目のプログラムが計算する関数を$\Phi_e$と書く．この列には重複があってよい．
+\end{defi}
+
+\begin{defi}
+全単射$\N^2 \to \N$を一つ固定し，$\N^2 \ni (x, y) \mapsto \langle x, y\rangle \in \N$とする．
+ただし$\operatorname{first}(\langle x, y \rangle) = x, \operatorname{second}(\langle x, y \rangle) = y$なる関数$\operatorname{first}, \operatorname{second}$が計算可能であるようにとる．
+\end{defi}
+
+\begin{prop}
+次のような$U \in \N$が存在する．
+任意の$e, x \in \N$に対し，
+\[\Phi_U(\langle e, x \rangle) = \Phi_e(x). \]
+
+$\Phi_U$のことをuniversal machineという．任意のプログラム$e$をエミュレートできるからである．
+\end{prop}
+この証明は実際にプログラム$U$を構成すればよい．$U$は「C言語のプログラムを受け取り，それを実行するC言語のプログラム」である．このようなプログラムは計算機界隈ではインタプリタと呼ばれるものである．
+
+\begin{defi}
+$A \subset \N$に対し，$A = \varnothing$またはある$f$: 計算可能があって$A = \range(f)$となるとき，$A$を{\bfseries computably enumerable (c.e.)}という．
+\end{defi}
+
+\begin{exm}
+平方数の全体はc.e.である．実際，次のプログラムがそれを示す．
+\begin{align*}
+&\operatorname{int} \operatorname{square\_number}(\operatorname{int} n) \{ \\
+&\hspace{4em}\operatorname{return} n * n; \\
+&\}
+\end{align*}
+\end{exm}
+
+\begin{prop}
+$A \subset \N$に対し次は同値
+
+
+\begin{enumerate}
+\item $A$はc.e.
+\item ある計算可能集合 $R$が存在し，
+\[x \in A \iff \exists s \in \N, \langle x, s\rangle \in R \]
+となる．
+\item あるp.c.関数$g$が存在し，$A = \dom g$．
+\end{enumerate}
+\end{prop}
+\begin{proof}
+(1) $\Rightarrow$ (2): $A = \varnothing$なら$R= \varnothing$とすればよい．
+$A = \range f$のとき
+\[R := \{\langle x, s\rangle \mid f(s)=x\}\]
+とおけばよい．
+
+(2) $\Rightarrow$ (3): $x \in A \iff \exists s \in \N, \langle x, s \rangle \in R$, $R$: compとする．
+このとき
+\begin{align*}
+&\operatorname{int} \operatorname{g}(\operatorname{int} x) \{ \\
+&\hspace{4em}\operatorname{int} s = 0; \\
+&\hspace{4em}\operatorname{while} (\operatorname{true}) \{ \\
+&\hspace{4em}\hspace{4em}\operatorname{if} (\langle x, s\rangle \in R) \{ \\
+&\hspace{4em}\hspace{4em}\hspace{4em}\operatorname{return} 0; \\
+&\hspace{4em}\hspace{4em}\} \\
+&\hspace{4em}\hspace{4em}s ++; \\
+&\hspace{4em}\} \\
+&\}
+\end{align*}
+とすると，このプログラムが計算する関数$g$について，$\dom g=A$となる．よって(3)が導けた．
+
+(3) $\Rightarrow$ (1): 
+$A = \dom \Phi_e$とする．$A \neq \varnothing$とする．
+すると$a \in A$を一つとれる．
+
+次のプログラムが計算する関数を$f$とする．
+\begin{align*}
+&\operatorname{int} \operatorname{f}(\operatorname{int} p) \{ \\
+&\hspace{4em}\operatorname{int} s = \operatorname{first}(p); \\
+&\hspace{4em}\operatorname{int} x = \operatorname{second}(p); \\
+&\hspace{4em}\operatorname{if} (\Phi_{e,s}(x)\downarrow) \{ \\
+&\hspace{4em}\hspace{4em}\operatorname{return} x; \\
+&\hspace{4em}\} \operatorname{else} \{ \\
+&\hspace{4em}\hspace{4em}\operatorname{return} a; \\
+&\hspace{4em}\} \\
+&\}
+\end{align*}
+
+このとき$\range f = \dom \Phi_e = A$となる．
+
+ここで$\Phi_{e,s}$は次で定義される関数である．
+
+\[
+\Phi_{e,s}(x) = \begin{cases}
+y & (eが指すプログラムにxを入力したとき実行ステップ数s以下で止まり出力はy) \\
+\mathrm{undefined} & (eが指すプログラムにxを入力したとき実行ステップ数がs+1以上)
+\end{cases}
+\]
+
+$\Phi_{e,s}(x)\downarrow$は計算可能になることに注意．
+\end{proof}
+
+
+\begin{prop}
+$A \subset \N$について次は同値
+
+\begin{enumerate}
+\item $A$は計算可能
+\item $A$と$A^c$の両方がc.e.
+\end{enumerate}
+\end{prop}
+\begin{proof}
+(1) $\Rightarrow$ (2): 次のプログラムが計算する関数を$g$とする．
+\begin{align*}
+&\operatorname{int} \operatorname{g}(\operatorname{int} x) \{ \\
+&\hspace{4em}\operatorname{if} (x \in A) \{ \\
+&\hspace{4em}\hspace{4em}\operatorname{return} 0; \\
+&\hspace{4em}\} \operatorname{else} \{ \\
+&\hspace{4em}\hspace{4em}\operatorname{while}(\operatorname{true})\{\} \\
+&\hspace{4em}\} \\
+&\}
+\end{align*}
+このとき$\dom g = A$より，$A$はc.e.である．
+$A^c$がc.e.なことの証明も同様．
+
+(2) $\Rightarrow$ (1): $A = \varnothing, \N$のときは明らか．$A \neq \varnothing, \N$とする．
+
+$A = \range f, A^c = \range g$とする．
+
+次のプログラムが計算する関数を$h$とする．
+\begin{align*}
+&\operatorname{int} \operatorname{h}(\operatorname{int} x) \{ \\
+&\hspace{4em}\operatorname{int} i = 0; \\
+&\hspace{4em}\operatorname{while}(\operatorname{true}) \{ \\
+&\hspace{4em}\hspace{4em}\operatorname{if}(f(i)==x) \{ \\
+&\hspace{4em}\hspace{4em}\hspace{4em}\operatorname{return} 1; \\
+&\hspace{4em}\hspace{4em}\} \operatorname{else} \operatorname{if} (g(i) == x) \{ \\
+&\hspace{4em}\hspace{4em}\hspace{4em}\operatorname{return} 0; \\
+&\hspace{4em}\hspace{4em}\} \\
+&\hspace{4em}\hspace{4em}i ++; \\
+&\hspace{4em}\} \\
+&\}
+\end{align*}
+このとき$h$は全域関数であり，$h = \chi_A$となる．
+\end{proof}
+
+\begin{defi}
+\begin{align*}
+K_0 &:= \{\langle e,x \rangle \mid \Phi_e(x) \downarrow \} \\
+K &:= \{x \in \N \mid \Phi_x(x) \downarrow \}
+\end{align*}
+\end{defi}
+
+\begin{prop}
+$K, K_0$はc.e.
+\end{prop}
+\begin{proof}
+$x \in K \iff \exists s\in\N, \Phi_{x,s}(x)\downarrow$より$K$はc.e.である．$K_0$も同様．
+\end{proof}
+
+\begin{thm}
+$K, K_0$は計算可能でない．
+\end{thm}
+\begin{proof}
+$K^c$はc.e.でないことを示す．
+$K^c = \dom(\Phi_e), e\in\N$とする．すると，
+\[e \in K^c \iff \Phi_e(e)\downarrow \iff e \in K \]
+となって矛盾．
+よって$K^c$はc.e.でないので$K$は計算可能でない．
+\[x \in K \iff \langle x, x \rangle \in K_0\]
+であるので$K$は$K_0$に“還元可能”である．よって$K_0$が計算可能だとしたら$K$も計算可能になる．したがって$K_0$は計算可能でない．
+\end{proof}
+
+この証明は対角線論法を使っている．
+
+\begin{table}[!h]
+\begin{tabular}{l|cccccc}
+$e \backslash x$ & 0 & 1 & 2 & 3 & 4 & \dots \\	\hline
+0 & 〇 & 〇 & × & × & 〇 & \dots \\
+1 & 〇 & × & 〇 & 〇 & 〇 & \dots \\
+2 & × & × & × & × & × & \dots \\
+3 & 〇 & 〇 & 〇 & 〇 & 〇 & \dots \\
+4 & 〇 & × & × & 〇 & × & \dots \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots & $\ddots$
+\end{tabular}
+\end{table}
+
+上のように$e$と$x$に対して$\Phi_e(x)\downarrow$かどうかを表にする．
+
+一般に〇×の表を作ったとき，表の中の行には現れない〇×のリストが存在する．実際，表の対角線から〇×の値を拾い，それを反転させた〇×のリストを考えればよい．
+
+ところが今考えている表においてはそのような〇×のリストとは$K^c$に属しているかどうかをリストしたものに他ならない．よって$x \in K^c \iff \Phi_e(x)\downarrow$となるような$e$は存在しない．すなわち$K^c$はc.e.ではない．
+
+\begin{defi}
+$A, B \subset \N$に対し，$f$: 計算可能があり，
+\[x \in A \iff f(x) \in B\]
+となるとき，$A \le_m B$であると定め，$A$は$B$に{\bfseries (多対一)還元可能}という．
+\end{defi}
+
+\begin{prop}\label{還元}
+$A \le_m B$かつ$B$が計算可能ならば$A$も計算可能
+\end{prop}
+\begin{proof}
+$B$の特徴関数を計算する関数を$\mathrm{is\_in\_}B$とする．以下のプログラムで$A$の特徴関数を計算できる:
+
+\begin{align*}
+&\operatorname{int} \mathrm{is\_in\_}A(\operatorname{int} x) \{ \\
+&\hspace{4em}\operatorname{return} \mathrm{is\_in\_}B(f(x)); \\
+&\}
+\end{align*}
+\end{proof}
+
+\section{ペアノ算術}
+
+ペアノ算術とは自然数論を捕まえるための形式体系である．形式体系とはいわば数学のミニチュアである．証明という数学の概念を数学的に解析するため，形式化を行う．
+
+一つの形式体系を定義するのは一つのプログラミング言語を定義することに似ている．プログラミング言語を定義するのにまずその文法を定義するように，ここでは形式体系の文法，すなわち項と論理式を定義する．
+
+\begin{defi}
+以下で定められる記号の列を{\bfseries PAの項}という．
+\begin{enumerate}
+\item $\bar{0}$はPAの項である
+\item 変数記号$x_0, x_1, x_2, \dots$はPAの項である
+\item $t$がPAの項ならば$t'$もPAの項である
+\item $s, t$がPAの項ならば$(s + t)$もPAの項である
+\item $s, t$がPAの項ならば$(s \times t)$もPAの項である
+\end{enumerate}
+\end{defi}
+
+\begin{exm}\leavevmode
+\begin{enumerate}
+\item $\bar{0}''$はPAの項である
+\item $(x_0 + (\bar{0}'' \times x_1))$はPAの項である
+\item $\times (\bar{0}) +$はPAの項ではない
+\item ( ；´Д｀)はPAの項ではない
+\end{enumerate}
+\end{exm}
+
+\begin{defi}
+以下で定められる記号の列を{\bfseries PAの論理式}という．
+\begin{enumerate}
+\item $s, t$がPAの項ならば$(s = t)$はPAの論理式である
+\item $\varphi$がPAの論理式ならば$(\neg \varphi)$はPAの論理式である
+\item $\varphi, \psi$がPAの論理式ならば$(\varphi \lor \psi)$はPAの論理式である
+\item $\varphi$がPAの論理式で$x$が変数記号ならば$(\forall x) \varphi$はPAの論理式である
+\end{enumerate}
+(1)の形の論理式を{\bfseries 原子論理式}という．
+
+また，以下の省略表現を用意する．
+\begin{enumerate}
+\item $(\varphi \to \psi)$と書いたら$((\neg \varphi) \lor \psi)$を省略したものとする
+\item $(\varphi \land \psi)$と書いたら$(\neg ((\neg \varphi) \lor (\neg \psi)))$を省略したものとする
+\item $(\exists x) \varphi$と書いたら$(\neg (\forall x) (\neg \varphi))$を省略したものとする
+\end{enumerate}
+
+また，以下，どこに挿入されるべきか明らかな括弧は省略して書く．
+\end{defi}
+
+\begin{exm}\leavevmode
+\begin{enumerate}
+\item $x_0 = \bar{0}$はPAの論理式である
+\item $(\forall x_0) (\forall x_1) (x_0 + x_1 = x_1 + x_0)$はPAの論理式である
+\item $(\exists x_0) (x_0 = x_0 + 1)$はPAの論理式である
+\end{enumerate}
+\end{exm}
+
+数学における証明とは公理から出発して論理的に正しい推論を積み上げていき目的の命題を得る行為だといえる．それを反映して，形式体系内での「証明」の概念を定義する．
+
+\begin{defi}
+以下の形をした論理式を{\bfseries 命題論理に関する公理}という
+\begin{enumerate}
+\item $(\varphi \lor \varphi) \to \varphi$
+\item $\varphi \to (\varphi \lor \psi)$
+\item $(\varphi \lor \psi) \to (\psi \lor \varphi)$
+\item $(\varphi \to \psi) \to (\theta \lor \varphi \to \theta \lor \psi)$
+\end{enumerate}
+\end{defi}
+
+\begin{defi}
+以下の形をした論理式を{\bfseries 量化記号に関する公理}という
+\begin{enumerate}
+\item $(\forall x) (\varphi \lor \psi) \to (\varphi \lor (\forall x) \psi)$
+\item $(\forall x) \varphi \to [t/x]\varphi$
+\end{enumerate}
+
+$[t/x]\varphi$とは$\varphi$の中に自由に現れる$x$をすべて項$t$で置き換えて得られる論理式のことを指す．
+
+なお，(1)では$\varphi$の中に$x$が自由に登場してはならない．
+また，(2)では項$t$の中の変数は$[t/x]\varphi$の中で量化記号で束縛されてはならない．
+\end{defi}
+
+\begin{defi}
+以下の形をした論理式を{\bfseries 等号に関する公理}という．
+\begin{enumerate}
+\item $x = x$
+\item $x = y \to ([y/x_0]\varphi \to [x/x_0]\varphi)$
+\item $x = y \to ([x/x_0]t = [y/x_0]t)$
+\end{enumerate}
+ただし$\varphi$は原子論理式とする．
+\end{defi}
+
+\begin{defi}
+以下の形をした論理式を{\bfseries 算術に関する公理}という．
+\begin{enumerate}
+\item $\bar{0} \ne x_0'$
+\item $x_0' = x_1' \to x_0 = x_1$
+\item $x_0 + \bar{0} = x_0$
+\item $x_0 + x_1' = (x_0 + x_1)'$
+\item $x_0 \times \bar{0} = \bar{0}$
+\item $x_0 \times x_1' = x_0 \times x_1 + x_0$
+\item $[0/x]\varphi \to ((\forall x)(\varphi \to [x'/x]\varphi) \to (\forall x) \varphi)$
+\end{enumerate}
+\end{defi}
+
+\begin{defi}
+以上の命題論理に関する公理，量化記号に関する公理，等号に関する公理，算術に関する公理をまとめて単に{\bfseries 公理}という
+\end{defi}
+
+\begin{defi}
+以下を推論規則という
+\begin{enumerate}
+\item (Modus Ponens) $\varphi \to \psi$と$\varphi$から$\psi$を導くこと
+\item (一般化) $\varphi$から$(\forall x) \varphi$を導くこと
+\end{enumerate}
+\end{defi}
+
+\begin{defi}
+すべての公理を含み，推論規則で閉じた最小の集合を$T_{PA}$と書き，その元をPAで{\bfseries 証明可能}な論理式という．
+
+別の言葉で言えば，次のような論理式の列$\varphi_0, \dots, \varphi_n$が存在するような論理式$\varphi$を証明可能という．
+すなわち，$\varphi = \varphi_n$であり，任意の$0 \le i \le n$に対して次のどれか少なくとも一つが成立する．
+\begin{enumerate}
+\item $\varphi_i$は公理である
+\item $i$より小さい$j, k$が存在して$\varphi_i$は$\varphi_j$と$\varphi_k$からMPによって導ける
+\item $i$より小さい$j$が存在して$\varphi_i$は$\varphi_j$から一般化によって導ける
+\end{enumerate}
+このような列を$\varphi$の{\bfseries 証明}という．
+
+$\varphi$がPAで証明可能なとき$\mathrm{PA} \vdash \varphi$と書く．
+\end{defi}
+\begin{exm}\label{推移律}
+任意の項$s, t, u$について等号の推移律$s = t \to (t=u \to s=u)$は証明可能である．
+
+以下が証明である．
+\begin{enumerate}
+\item $x_1 = x_2 \to (x_2 = x_3 \to x_1 = x_3)$ (等号に関する公理 (2))
+\item $(\forall x_3) (x_1 = x_2 \to (x_2 = x_3 \to x_1 = x_3))$ ((1)に一般化を適用)
+\item $(\forall x_3) (x_1 = x_2 \to (x_2 = x_3 \to x_1 = x_3)) \to (x_1 = x_2 \to (x_2 = u \to x_1 = u))$ (量化子に関する公理 (2))
+\item $x_1 = x_2 \to (x_2 = u \to x_1 = u)$ ((2)と(3)にMP適用)
+\item $(\forall x_2) (x_1 = x_2 \to (x_2 = u \to x_1 = u))$ ((4)に一般化)
+\item $(\forall x_2) (x_1 = x_2 \to (x_2 = u \to x_1 = u)) \to (x_1 = t \to (t = u \to x_1 = u))$ (量化子に関する公理 (2))
+\item $x_1 = t \to (t = u \to x_1 = u)$ ((5)と(6)にMP適用)
+\item $(\forall x_1) (x_1 = t \to (t = u \to x_1 = u))$ ((7)に一般化適用)
+\item $(\forall x_1) (x_1 = t \to (t = u \to x_1 = u))　\to (s = t \to (t = u \to s = u))$ (量化子に関する公理 (2))
+\item $s = t \to (t = u \to s = u)$ ((8)と(9)にMP適用)
+\end{enumerate}
+\end{exm}
+
+\begin{exm}\label{代入例}
+同様に算術の公理の変数$x_0, x_1$に任意の項を代入した論理式は証明可能である．
+
+同様に等号の公理(3)の変数に任意の項を代入した$s = t \to [s/x_0]u = [t/x_0]u$も証明可能である．
+\end{exm}
+
+\begin{exm}
+$1 + 1 = 2$はPAで証明可能である．
+
+\begin{enumerate}
+\item $0' + 0 = 0'$ (算術に関する公理 (3)と例\ref{代入例})
+\item $(0' + 0 = 0') \to (0' + 0)' = 0''$ (代入に関する公理(3)と例\ref{代入例})
+\item $(0' + 0)' = 0''$ ((1)と(2)にMP)
+\item $0' + 0' = (0' + 0)'$ (算術に関する公理 (4)と例\ref{代入例})
+\item $0' + 0' = (0' + 0)' \to ((0' + 0)' = 0'' \to 0' + 0' = 0'')$ (例\ref{推移律})
+\item $0' + 0' = 0''$ ((4)と(5)にMP適用)
+\end{enumerate}
+\end{exm}
+
+\begin{defi}
+ある閉論理式$\varphi$が存在して$\varphi$と$\neg \varphi$の両方がPAで証明可能なとき，PAは{\bfseries 矛盾している}という．そうでないときPAは{\bfseries 無矛盾}であるという．
+
+任意の閉論理式$\varphi$に対して，$\varphi$と$\neg \varphi$のどちらか一方がPAで証明可能なとき，PAは{\bfseries 完全}であるという．
+
+ここで閉論理式とは，自由変数のない論理式である．
+\end{defi}
+
+\begin{thm}[ゲーデルの第一不完全性定理]
+PAは，無矛盾であるならば不完全である．
+\end{thm}
+
+\begin{prop}[表現定理]
+$A$を計算可能集合とする．このときPAの論理式$\varphi(x)$が存在して
+\begin{align*}
+x \in A &\Rightarrow \mathrm{PA} \vdash \varphi(\bar{x}) \\
+x \not \in A &\Rightarrow \mathrm{PA} \vdash \neg \varphi(\bar{x})
+\end{align*}
+となる．
+\end{prop}
+
+ここではしないが，表現定理を証明するには次のようにする:
+\begin{itemize}
+\item 「帰納的関数」と呼ばれる関数のクラスを用意してそれが計算可能関数のクラスと一致することを示す
+\item 表現定理を帰納的関数の構成に関する帰納法で示す
+\end{itemize}
+
+\begin{prop}[半表現定理]
+$PA$を無矛盾とする．$A$をc.e. setとする．このときPAの論理式$\varphi(x)$が存在して
+\[x \in A \iff \mathrm{PA} \vdash (\exists s) \varphi(\bar{x}, s)\]
+となる．
+\end{prop}
+
+半表現定理は表現定理より従う．$\omega$無矛盾性というものを仮定すれば証明は自然にできるが，ただの無矛盾性の場合は証明はやっかいである．
+
+\begin{defi}
+PAの記号の有限列に適当な方法で自然数(コード，ゲーデル数)を割り当てる．ただし符号化した自然数から元の有限列の要素を得る関数が計算可能となるようにする．たとえば2進法を使ったり素因数分解を使う．
+
+PAの記号列の列に対しても同様に自然数を割り当てる．
+
+論理式$\varphi$に対してそのゲーデル数を$\operatorname{gn}(\varphi)$と書く．
+\end{defi}
+
+\begin{prop}
+自然数$n$に対して
+\[\operatorname{isfml}(n) \iff nがある論理式のゲーデル数\]
+と定義すると$\operatorname{isfml}$は計算可能な述語である．
+
+自然数$p, n$に対して
+\begin{align*}
+\operatorname{proves}(p, n) \iff &pがある証明のゲーデル数でnがある論理式のゲーデル数であり \\ 
+&pはnが指す論理式の証明を指している
+\end{align*}
+と定義すると$\operatorname{proves}$は計算可能な述語である．
+\end{prop}
+具体的にこれらを計算するプログラムを書くのが面倒だが難しくはない．
+
+$T_{\mathrm{PA}}$に属する各論理式のゲーデル数をとった集合も同じく$T_{\mathrm{PA}}$と書くことにする．
+
+\begin{thm}
+$PA$を無矛盾とする．$T_{\mathrm{PA}}$は計算可能でない．
+\end{thm}
+\begin{proof}
+$K$がc.e.であることと半表現定理より，$K \le_m T_{\mathrm{PA}}$である．よって命題 \ref{還元}より$T_{\mathrm{PA}}$は計算可能でない．
+\end{proof}
+
+\noindent 第一不完全性定理の証明．もしPAが完全であれば，次のようにしてPAで証明可能な論理式か判定するプログラムが書ける．それは$T_{\mathrm{PA}}$は計算可能でないことに反する．
+
+\begin{align*}
+&\operatorname{int} \operatorname{isprovable}(\operatorname{int} x) \{ \\
+&\hspace{4em}\operatorname{if} (!\operatorname{isfml}(x)) \operatorname{return} 0; \\
+&\hspace{4em}\operatorname{int} n = 0; \\
+&\hspace{4em}\operatorname{while} (\operatorname{true}) \{ \\
+&\hspace{4em}\hspace{4em}\operatorname{if} (\operatorname{proves}(n, x)) \operatorname{return} 1; \\
+&\hspace{4em}\hspace{4em}\operatorname{if} (\operatorname{proves}(n, \operatorname{neg}(x))) \operatorname{return} 0; \\
+&\hspace{4em}\hspace{4em}n ++; \\
+&\hspace{4em}\} \\
+&\}
+\end{align*}
+
+\begin{thebibliography}{9}
+\item 鹿島亮 (2008)『C言語による計算の理論』サイエンス社
+\item S.Barry Cooper (2002) “Computability Thoery” Chapman and Hall/CRC
+\item 照井一成 (2015)『コンピュータは数学者になれるのか？』 青土社
+\item 河村彰星 (2017) 『はじめての計算可能性』 \\ \url{http://www.graco.c.u-tokyo.ac.jp/~kawamura/t/summer_H29/}
+\item 坪井明人　(2012)『数理論理学の基礎・基本』 牧野書店
+\end{thebibliography}
+
+
+\end{document}
